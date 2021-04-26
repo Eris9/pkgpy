@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+import os
+import subprocess
+pkg_cmds = ["pkg","pkg help","pkg install"]
+
+def execute_command(command):
+	"""execute commands and handle piping"""
+	try:
+			if "|" in command:
+					# save for restoring later on
+					s_in, s_out = (0, 0)
+					s_in = os.dup(0)
+					s_out = os.dup(1)
+
+					# first command takes commandut from stdin
+					fdin = os.dup(s_in)
+
+					# iterate over all the commands that are piped
+					for cmd in command.split("|"):
+							# fdin will be stdin if it's the first iteration
+							# and the readable end of the pipe if not.
+							os.dup2(fdin, 0)
+							os.close(fdin)
+
+							# restore stdout if this is the last command
+							if cmd == command.split("|")[-1]:
+									fdout = os.dup(s_out)
+							else:
+									fdin, fdout = os.pipe()
+
+							# redirect stdout to pipe
+							os.dup2(fdout, 1)
+							os.close(fdout)
+
+							try:
+									subprocess.run(cmd.strip().split())
+							except Exception:
+									print("psh: command not found: {}".format(cmd.strip()))
+
+					# restore stdout and stdin
+					os.dup2(s_in, 0)
+					os.dup2(s_out, 1)
+					os.close(s_in)
+					os.close(s_out)
+			else:
+					subprocess.run(command.split(" "))
+	except Exception:
+			if command in pkg_cmds:
+				return
+			else:
+				print("psh: command not found: {}".format(command))
+
+
+def psh_cd(path):
+	"""convert to absolute path and change directory"""
+	try:
+			os.chdir(os.path.abspath(path))
+	except Exception:
+			print("cd: no such file or directory: {}".format(path))
+
+
+term = "pkg"
+term2 = "install"
+term3 = "pkp"
+
+def main():
+	while True:
+			inp = input("$ ")
+			content = inp.split()
+			pkgonly = len(content)
+			if inp == "exit":
+					break
+			elif inp[:3] == "cd ":
+					psh_cd(inp[3:])
+			try:
+				if term in content[0]:
+					if pkgonly == 1:
+						print("Type pkg help for all commands")
+					elif "help" in content[1]:
+						print("welcome to pkg\nA cross platform cross language package manager made by Eris9/Sakurai07\n**Commands:**\nhelp - this command\ninstall - install a package from pkg\npkp - install a pip package using pkg\npkp pipinst - install it normally using pip\npkgit - install a pkg package from a git repository\nlist - list all pkg packages\ndevelop - tutorial to develop pkg packages\nexit - exit the pkg shell\nrepository - shows the pkg github respository")
+					elif term2 in content[1] and content[2] == None:
+						print("worked")
+						if content[2] == None:
+							print("please enter a package")
+						elif content[2] != None:
+							package = content[2]
+							print(package)
+				if term3 in content[0]:
+					os.system(f"pip install {content[1]}")
+			except:
+				print(" ")
+			else:
+					execute_command(inp)
+
+
+if '__main__' == __name__:
+	main()
