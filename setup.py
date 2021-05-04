@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='pkgpy',
-      version='0.2',
+      version='0.3',
       description='pkgpy',
       url='http://github.com/eris9/pkgpy',
       author='Eris9/Sakurai07',
